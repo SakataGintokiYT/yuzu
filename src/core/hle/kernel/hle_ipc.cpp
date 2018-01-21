@@ -48,6 +48,7 @@ void HLERequestContext::ParseCommandBuffer(u32_le* src_cmdbuf, bool incoming) {
 
     // If handle descriptor is present, add size of it
     if (command_header->enable_handle_descriptor) {
+        LOG_WARNING(IPC, "Enabled handle descriptor!");
         handle_descriptor_header =
             std::make_unique<IPC::HandleDescriptorHeader>(rp.PopRaw<IPC::HandleDescriptorHeader>());
         if (handle_descriptor_header->send_current_pid) {
@@ -69,6 +70,8 @@ void HLERequestContext::ParseCommandBuffer(u32_le* src_cmdbuf, bool incoming) {
         }
     }
 
+    LOG_WARNING(IPC, "GetCurrentOffset: %d - %d", rp.GetCurrentOffset(),
+                command_header->enable_handle_descriptor.Value());
     for (unsigned i = 0; i < command_header->num_buf_x_descriptors; ++i) {
         buffer_x_desciptors.push_back(rp.PopRaw<IPC::BufferDescriptorX>());
     }
@@ -150,11 +153,7 @@ ResultCode HLERequestContext::PopulateFromIncomingCommandBuffer(u32_le* src_cmdb
     }
 
     // The data_size already includes the payload header, the padding and the domain header.
-    size_t size = data_payload_offset + command_header->data_size -
-                  sizeof(IPC::DataPayloadHeader) / sizeof(u32) - 4;
-    if (domain_message_header)
-        size -= sizeof(IPC::DomainMessageHeader) / sizeof(u32);
-    std::copy_n(src_cmdbuf, size, cmd_buf.begin());
+    std::copy_n(src_cmdbuf, cmd_buf.size(), cmd_buf.begin());
     return RESULT_SUCCESS;
 }
 

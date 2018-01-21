@@ -90,7 +90,8 @@ static ResultCode SendSyncRequest(Handle handle) {
     SharedPtr<SyncObject> session = g_handle_table.Get<SyncObject>(handle);
     if (!session) {
         LOG_ERROR(Kernel_SVC, "called with invalid handle=0x%08X", handle);
-        return ERR_INVALID_HANDLE;
+        return RESULT_SUCCESS;
+        // return ERR_INVALID_HANDLE;
     }
 
     LOG_TRACE(Kernel_SVC, "called handle=0x%08X(%s)", handle, session->GetName().c_str());
@@ -734,6 +735,16 @@ static ResultCode CreateTransferMemory(Handle* handle, VAddr addr, u64 size, u32
     return RESULT_SUCCESS;
 }
 
+static ResultCode CreateSharedMemory(Handle* handle, VAddr sz, u64 localPerm, u32 remotePerm) {
+    LOG_WARNING(Kernel_SVC, "(STUBBED) called sz=0x%llx, localPerm=0x%llx, remotePerm=%08X", sz,
+                localPerm, remotePerm);
+    auto hand = SharedMemory::Create(g_handle_table.Get<Process>(KernelHandle::CurrentProcess), sz,
+                                     (Kernel::MemoryPermission)localPerm,
+                                     (Kernel::MemoryPermission)remotePerm);
+    CASCADE_RESULT(*handle, g_handle_table.Create(hand));
+    return RESULT_SUCCESS;
+}
+
 static ResultCode SetThreadCoreMask(u64, u64, u64) {
     LOG_WARNING(Kernel_SVC, "(STUBBED) called");
     return RESULT_SUCCESS;
@@ -914,9 +925,11 @@ void CallSVC(u32 immediate) {
             info->func();
         } else {
             LOG_CRITICAL(Kernel_SVC, "unimplemented SVC function %s(..)", info->name);
+            UNIMPLEMENTED();
         }
     } else {
         LOG_CRITICAL(Kernel_SVC, "unknown SVC function 0x%x", immediate);
+        UNIMPLEMENTED();
     }
 }
 

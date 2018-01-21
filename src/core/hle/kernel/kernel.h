@@ -101,7 +101,11 @@ public:
         case HandleType::Domain:
             return true;
         }
-
+        switch (GetHandleType()) {
+        case HandleType::ServerSession:
+            return false;
+        }
+        printf("%x\n", GetHandleType());
         UNREACHABLE();
     }
 

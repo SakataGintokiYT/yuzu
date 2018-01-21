@@ -26,7 +26,7 @@ private:
         LOG_WARNING(Service, "(STUBBED) called");
         IPC::RequestBuilder rb{ctx, 4};
         rb.Push(RESULT_SUCCESS);
-        rb.Push<u64>(0);
+        rb.Push<u64>(0x69);
     }
 
     void AcquireForegroundRights(Kernel::HLERequestContext& ctx) {
@@ -65,6 +65,7 @@ public:
             {14, &ISelfController::SetRestartMessageEnabled, "SetRestartMessageEnabled"},
             {16, &ISelfController::SetOutOfFocusSuspendingEnabled,
              "SetOutOfFocusSuspendingEnabled"},
+            {40, &ISelfController::CreateManagedDisplayLayer, "CreateManagedDisplayLayer"},
         };
         RegisterHandlers(functions);
     }
@@ -141,7 +142,13 @@ private:
     void UnlockExit(Kernel::HLERequestContext& ctx) {
         IPC::RequestBuilder rb{ctx, 2};
         rb.Push(RESULT_SUCCESS);
+        LOG_WARNING(Service, "(STUBBED) called");
+    }
 
+    void CreateManagedDisplayLayer(Kernel::HLERequestContext& ctx) {
+        IPC::RequestBuilder rb{ctx, 4};
+        rb.Push(RESULT_SUCCESS);
+        rb.Push<u64>(0x0);
         LOG_WARNING(Service, "(STUBBED) called");
     }
 };

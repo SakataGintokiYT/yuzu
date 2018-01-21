@@ -6,6 +6,7 @@
 
 #include <vector>
 #include "common/common_types.h"
+#include "common/swap.h"
 #include "core/hle/service/nvdrv/devices/nvdevice.h"
 
 namespace Service {
@@ -18,6 +19,57 @@ public:
     ~nvhost_as_gpu() override = default;
 
     u32 ioctl(u32 command, const std::vector<u8>& input, std::vector<u8>& output) override;
+
+private:
+    u32 channel{};
+
+    enum IoctlCommands {
+        IocInitalizeExCommand = 0x40284109,
+        IocAllocateSpaceCommand = 0xC0184102,
+        IocMapBufferExCommand = 0xC0284106,
+        IocBindChannelCommand = 0x40044101,
+    };
+
+private:
+    struct initalize_ex {
+        u32_le big_page_size; // depends on GPU's available_big_page_sizes; 0=default
+        s32_le as_fd;         // ignored; passes 0
+        u32_le flags;         // passes 0
+        u32_le reserved;      // ignored; passes 0
+        u64_le unk0;
+        u64_le unk1;
+        u64_le unk2;
+    };
+
+    struct alloc_space {
+        u32_le pages;
+        u32_le page_size;
+        u32_le flags;
+        u32_le pad;
+        union {
+            u64_le offset;
+            u64_le align;
+        };
+    };
+
+    struct map_buffer_ex {
+        u32_le flags; // bit0: fixed_offset, bit2: cacheable
+        u32_le kind;  // -1 is default
+        u32_le nvmap_handle;
+        u32_le page_size; // 0 means don't care
+        u64_le buffer_offset;
+        u64_le mapping_size;
+        u64_le offset;
+    };
+
+    struct bind_channel {
+        u32_le fd;
+    };
+
+    u32 InitalizeEx(const std::vector<u8>& input, std::vector<u8>& output);
+    u32 AllocateSpace(const std::vector<u8>& input, std::vector<u8>& output);
+    u32 MapBufferEx(const std::vector<u8>& input, std::vector<u8>& output);
+    u32 BindChannel(const std::vector<u8>& input, std::vector<u8>& output);
 };
 
 } // namespace Devices

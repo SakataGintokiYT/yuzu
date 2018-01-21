@@ -15,6 +15,8 @@ namespace Nvidia {
 namespace Devices {
 
 u32 nvdisp_disp0::ioctl(u32 command, const std::vector<u8>& input, std::vector<u8>& output) {
+    LOG_WARNING(Debug_GPU, "Got Ioctl 0x%x, inputsz: 0x%x, outputsz: 0x%x", command, input.size(),
+                output.size());
     UNIMPLEMENTED();
     return 0;
 }

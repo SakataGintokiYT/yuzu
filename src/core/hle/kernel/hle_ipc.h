@@ -151,6 +151,53 @@ public:
         return domain_message_header;
     }
 
+    const void DumpIPC() {
+        printf("-------------------------------\n");
+        for (int i = 0; i < 0x80 / 4; i++) {
+            if (i % (16 / 4) == 0)
+                printf("\n");
+            u32_le buf = CommandBuffer()[i];
+            u8 a = (buf >> 24) & 0xFF;
+            u8 b = (buf >> 16) & 0xFF;
+            u8 c = (buf >> 8) & 0xFF;
+            u8 d = buf & 0xFF;
+            printf("%02x %02x %02x %02x ", d, c, b, a);
+        }
+        printf("\n");
+        printf("-------------------------------\n");
+    }
+
+    const void DumpInfo() {
+        printf("[IPC_Dump] Command: %d\n", GetCommand());
+        printf("[IPC_Dump] XDescriptor count: %ld\n", buffer_x_desciptors.size());
+        for (int i = 0; i < buffer_x_desciptors.size(); i++)
+            printf("\t[IPC_Dump] XDescriptor[%d] size: %x, addr: 0x%x\n", i,
+                   buffer_x_desciptors[i].size.Value(), buffer_x_desciptors[i].Address());
+
+        printf("[IPC_Dump] ADescriptor count: %d\n", buffer_a_desciptors.size());
+        for (int i = 0; i < buffer_a_desciptors.size(); i++)
+            printf("\t[IPC_Dump] ADescriptor[%d] size: %lx, addr: 0x%x\n", i,
+                   buffer_a_desciptors[i].Size(), buffer_a_desciptors[i].Address());
+
+        printf("[IPC_Dump] BDescriptor count: %d\n", buffer_b_desciptors.size());
+        for (int i = 0; i < buffer_b_desciptors.size(); i++)
+            printf("\t[IPC_Dump] BDescriptor[%d] size: %lx, addr: 0x%x\n", i,
+                   buffer_b_desciptors[i].Size(), buffer_b_desciptors[i].Address());
+
+        printf("[IPC_Dump] CDescriptor count: %d\n", buffer_c_desciptors.size());
+        for (int i = 0; i < buffer_c_desciptors.size(); i++)
+            printf("\t[IPC_Dump] CDescriptor[%d] size: %x, addr: 0x%x\n", i,
+                   buffer_c_desciptors[i].size.Value(), buffer_c_desciptors[i].Address());
+
+        printf("[IPC_Dump] CopyObject count: %d\n", copy_objects.size());
+        for (int i = 0; i < copy_objects.size(); i++)
+            printf("\t[IPC_Dump] CopyObject[%d] id: 0x%x\n", i, copy_objects[i]->GetObjectId());
+
+        printf("[IPC_Dump] MoveObject count: %d\n", move_objects.size());
+        for (int i = 0; i < copy_objects.size(); i++)
+            printf("\t[IPC_Dump] MoveObject[%d] id: 0x%x\n", i, move_objects[i]->GetObjectId());
+    }
+
     bool IsDomain() const {
         return domain != nullptr;
     }

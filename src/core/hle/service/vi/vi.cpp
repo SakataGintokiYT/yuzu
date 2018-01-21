@@ -12,6 +12,8 @@
 #include "core/hle/service/nvdrv/nvdrv.h"
 #include "core/hle/service/vi/vi.h"
 #include "core/hle/service/vi/vi_m.h"
+#include "core/hle/service/vi/vi_s.h"
+#include "core/hle/service/vi/vi_u.h"
 #include "video_core/renderer_base.h"
 #include "video_core/video_core.h"
 
@@ -364,7 +366,7 @@ public:
             {0, &IHOSBinderDriver::TransactParcel, "TransactParcel"},
             {1, &IHOSBinderDriver::AdjustRefcount, "AdjustRefcount"},
             {2, &IHOSBinderDriver::GetNativeHandle, "GetNativeHandle"},
-            {3, nullptr, "TransactParcelAuto"},
+            {3, &IHOSBinderDriver::TransactParcel, "TransactParcelAuto"},
         };
         RegisterHandlers(functions);
     }
@@ -618,26 +620,57 @@ void IApplicationDisplayService::CloseDisplay(Kernel::HLERequestContext& ctx) {
 void IApplicationDisplayService::OpenLayer(Kernel::HLERequestContext& ctx) {
     LOG_WARNING(Service, "(STUBBED) called");
     IPC::RequestParser rp{ctx};
-    auto name_buf = rp.PopRaw<std::array<u8, 0x40>>();
-    auto end = std::find(name_buf.begin(), name_buf.end(), '\0');
-
-    std::string display_name(name_buf.begin(), end);
-
-    u64 layer_id = rp.Pop<u64>();
-    u64 aruid = rp.Pop<u64>();
-
+    // auto name_buf = rp.PopRaw<std::array<u8, 0x40>>();
+    auto name_buf = std::array<u8, 0x40>();
     auto& buffer = ctx.BufferDescriptorB()[0];
 
-    u64 display_id = nv_flinger->OpenDisplay(display_name);
-    u32 buffer_queue_id = nv_flinger->GetBufferQueueId(display_id, layer_id);
+    *(u32*)&name_buf[0] = 0x28;         // ParcelDataSize
+    *(u32*)&name_buf[4] = 0x10;         // ParcelDataOffset
+    *(u32*)&name_buf[8] = 0x4;          // ParcelObjectsSize
+    *(u32*)&name_buf[12] = 0x10 + 0x28; // ParcelObjectsOffset
+    *(u32*)&name_buf[16] = 0x2;         // ParcelData
+    *(u32*)&name_buf[20] = 0x1;         // PID Maybe
+    *(u32*)&name_buf[24] = 0x19;        // ID
+    *(u32*)&name_buf[28] = 0;
+    *(u32*)&name_buf[32] = 0;
+    *(u32*)&name_buf[36] = 0;
+    name_buf[40] = 'd';
+    name_buf[41] = 'i';
+    name_buf[42] = 's';
+    name_buf[43] = 'p';
+    name_buf[44] = 'd';
+    name_buf[45] = 'r';
+    name_buf[46] = 'v';
+    name_buf[47] = 0;
+    *(u32*)&name_buf[48] = 0;
+    *(u32*)&name_buf[52] = 0;
+    *(u32*)&name_buf[56] = 0;
 
-    NativeWindow native_window{buffer_queue_id};
-    auto data = native_window.Serialize();
-    Memory::WriteBlock(buffer.Address(), data.data(), data.size());
-
+    Memory::WriteBlock(buffer.Address(), name_buf.data(), name_buf.size());
     IPC::RequestBuilder rb = rp.MakeBuilder(4, 0, 0, 0);
     rb.Push(RESULT_SUCCESS);
-    rb.Push<u64>(data.size());
+    rb.Push<u64>(0x3c);
+    /*
+     auto name_buf = rp.PopRaw<std::array<u8, 0x40>>();
+     auto end = std::find(name_buf.begin(), name_buf.end(), '\0');
+
+     std::string display_name(name_buf.begin(), end);
+
+     u64 layer_id = rp.Pop<u64>();
+     u64 aruid = rp.Pop<u64>();
+
+     auto& buffer = ctx.BufferDescriptorB()[0];
+
+     u64 display_id = nv_flinger->OpenDisplay(display_name);
+     u32 buffer_queue_id = nv_flinger->GetBufferQueueId(display_id, layer_id);
+
+     NativeWindow native_window{buffer_queue_id};
+     auto data = native_window.Serialize();
+     Memory::WriteBlock(buffer.Address(), data.data(), data.size());
+
+     IPC::RequestBuilder rb = rp.MakeBuilder(4, 0, 0, 0);
+     rb.Push(RESULT_SUCCESS);
+     rb.Push<u64>(data.size());*/
 }
 
 void IApplicationDisplayService::CreateStrayLayer(Kernel::HLERequestContext& ctx) {
@@ -718,6 +751,8 @@ IApplicationDisplayService::IApplicationDisplayService(std::shared_ptr<NVFlinger
 
 void InstallInterfaces(SM::ServiceManager& service_manager) {
     std::make_shared<VI_M>()->InstallAsService(service_manager);
+    std::make_shared<VI_S>()->InstallAsService(service_manager);
+    std::make_shared<VI_U>()->InstallAsService(service_manager);
 }
 
 NVFlinger::NVFlinger() {
@@ -733,8 +768,8 @@ NVFlinger::NVFlinger() {
     displays.emplace_back(internal);
 
     // Schedule the screen composition events
-    composition_event =
-        CoreTiming::RegisterEvent("ScreenCompositioin", [this](u64 userdata, int cycles_late) {
+    composition_event = CoreTiming::RegisterEvent(
+        "ScreenCompositioin" + std::to_string(rand()), [this](u64 userdata, int cycles_late) {
             Compose();
             CoreTiming::ScheduleEvent(frame_ticks - cycles_late, composition_event);
         });
@@ -787,8 +822,9 @@ std::shared_ptr<BufferQueue> NVFlinger::GetBufferQueue(u32 id) const {
     auto itr = std::find_if(buffer_queues.begin(), buffer_queues.end(),
                             [&](const auto& queue) { return queue->GetId() == id; });
 
-    ASSERT(itr != buffer_queues.end());
-    return *itr;
+    // ASSERT(itr != buffer_queues.end());
+    // return *itr;
+    return std::make_shared<BufferQueue>(0, 0);
 }
 
 Display& NVFlinger::GetDisplay(u64 display_id) {
